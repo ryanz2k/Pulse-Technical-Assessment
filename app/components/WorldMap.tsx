@@ -62,6 +62,7 @@ export default function WorldMap({
       map.on("load", () => {
         if (!cancelled) setReady(true);
       });
+      map.addControl(new mapboxgl.NavigationControl({ showCompass: true, showZoom: true }), "top-right");
       mapRef.current = map;
     })();
 
@@ -167,9 +168,21 @@ export default function WorldMap({
         </div>
       )}
 
-      {/* Online count */}
-      <div className="absolute bottom-4 left-4 rounded-full bg-zinc-900/80 px-3 py-1.5 text-xs text-zinc-300 backdrop-blur">
-        {peers.length} online
+      {/* Online count and Center button */}
+      <div className="absolute bottom-6 left-6 flex items-center gap-3">
+        <div className="rounded-full bg-zinc-900/80 px-4 py-2 text-sm font-medium text-zinc-300 shadow-lg backdrop-blur">
+          <span className="mr-2 inline-block h-2 w-2 rounded-full bg-emerald-400"></span>
+          {peers.length} online
+        </div>
+        
+        {me && (
+          <button
+            onClick={() => mapRef.current?.flyTo({ center: [me.lng, me.lat], zoom: 4, pitch: 0, bearing: 0 })}
+            className="rounded-full bg-zinc-800/90 hover:bg-zinc-700 px-4 py-2 text-sm font-medium text-zinc-200 shadow-lg backdrop-blur transition-colors"
+          >
+            📍 Center on Me
+          </button>
+        )}
       </div>
     </div>
   );

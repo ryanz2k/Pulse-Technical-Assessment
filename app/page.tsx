@@ -30,9 +30,9 @@ export default function Home() {
   const [notice, setNotice] = useState<string | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-  const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(
-    null,
-  );
+  const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isChatMinimized, setIsChatMinimized] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
 
   const [conn, _setConn] = useState<Conn>({ kind: "idle" });
   const connRef = useRef<Conn>(conn);
@@ -51,6 +51,7 @@ export default function Home() {
   const peerRef = useRef<PeerSession | null>(null);
   const msgId = useRef(0);
   const requestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function showNotice(text: string) {
     setNotice(text);
@@ -58,11 +59,18 @@ export default function Home() {
   }
 
   function addMessage(mine: boolean, text: string) {
-    setMessages((prev) => [...prev, { id: msgId.current++, mine, text }]);
+    setMessages((prev) => [...prev, { id: msgId.current++, mine, text, ts: Date.now() }]);
+  }
+
+  function handleRemoteTyping() {
+    setIsTyping(true);
+    if (typingTimer.current) clearTimeout(typingTimer.current);
+    typingTimer.current = setTimeout(() => setIsTyping(false), 3000);
   }
 
   function teardown(message?: string) {
     if (requestTimer.current) clearTimeout(requestTimer.current);
+    if (typingTimer.current) clearTimeout(typingTimer.current);
     peerRef.current?.close();
     peerRef.current = null;
     setLocalStream(null);
@@ -70,6 +78,8 @@ export default function Home() {
     setVideo("none");
     setMessages([]);
     setConn({ kind: "idle" });
+    setIsTyping(false);
+    setIsChatMinimized(false);
     if (message) showNotice(message);
   }
 
@@ -78,7 +88,10 @@ export default function Home() {
       onSignal: (type: DescType, payload: string) => {
         void sendSignal(sessionId, peerId, type, payload);
       },
-      onChat: (text) => addMessage(false, text),
+      onChat: (text) => {
+        setIsTyping(false);
+        addMessage(false, text);
+      },
       onControl: (ctrl) => handleControl(ctrl),
       onRemoteStream: (stream) => setRemoteStream(stream),
       onConnectionState: (state) => {
@@ -89,6 +102,7 @@ export default function Home() {
       onChannelOpen: () => {
         setConn({ kind: "connected", peerId });
       },
+      onTyping: () => handleRemoteTyping(),
     });
     peerRef.current = ps;
   }
@@ -314,6 +328,7 @@ export default function Home() {
   }
 
   const inChat = conn.kind === "connecting" || conn.kind === "connected";
+  const chatMinimized = isChatMinimized || !inChat;
 
   return (
     <main className="fixed inset-0 overflow-hidden">
@@ -324,18 +339,20 @@ export default function Home() {
         canConnect={conn.kind === "idle"}
       />
 
+      {/* Toast notice */}
       {notice && (
-        <div className="absolute left-1/2 top-20 z-30 -translate-x-1/2 rounded-full bg-zinc-800/90 px-4 py-2 text-sm text-zinc-100 shadow-lg backdrop-blur">
+        <div className="absolute left-1/2 top-20 z-50 -translate-x-1/2 rounded-full bg-zinc-800/90 px-5 py-2 text-sm text-zinc-100 shadow-xl backdrop-blur-md">
           {notice}
         </div>
       )}
 
       {conn.kind === "requesting" && (
-        <div className="absolute left-1/2 top-20 z-30 flex -translate-x-1/2 items-center gap-3 rounded-full bg-zinc-800/90 px-4 py-2 text-sm text-zinc-100 shadow-lg backdrop-blur">
+        <div className="absolute left-1/2 top-20 z-30 flex -translate-x-1/2 items-center gap-3 rounded-full bg-zinc-800/90 px-5 py-2.5 text-sm text-zinc-100 shadow-xl backdrop-blur-md">
+          <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
           <span>Requesting connection…</span>
           <button
             onClick={cancelRequest}
-            className="rounded-full bg-zinc-700 px-3 py-1 text-xs hover:bg-zinc-600"
+            className="rounded-full bg-zinc-700 px-3 py-1 text-xs hover:bg-zinc-600 transition-colors"
           >
             Cancel
           </button>
@@ -359,15 +376,19 @@ export default function Home() {
           videoBusy={video !== "none"}
           onSend={(text) => {
             peerRef.current?.sendChat(text);
+            peerRef.current?.sendControl("typing" as PeerControl);
             addMessage(true, text);
           }}
           onStartVideo={startVideoRequest}
           onEnd={endConnection}
+          isMinimized={isChatMinimized}
+          onToggleMinimize={() => setIsChatMinimized((v) => !v)}
+          isTyping={isTyping}
         />
       )}
 
       {video === "requesting" && (
-        <div className="absolute bottom-24 left-1/2 z-30 -translate-x-1/2 rounded-full bg-zinc-800/90 px-4 py-2 text-sm text-zinc-100 shadow-lg backdrop-blur">
+        <div className="absolute bottom-24 left-1/2 z-30 -translate-x-1/2 rounded-full bg-zinc-800/90 px-5 py-2 text-sm text-zinc-100 shadow-xl backdrop-blur-md">
           Waiting for stranger to accept video…
         </div>
       )}
@@ -388,6 +409,7 @@ export default function Home() {
           localStream={localStream}
           remoteStream={remoteStream}
           onEnd={endVideo}
+          isChatMinimized={chatMinimized}
         />
       )}
     </main>

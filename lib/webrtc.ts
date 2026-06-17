@@ -3,7 +3,8 @@ export type PeerControl =
   | "video-request"
   | "video-accept"
   | "video-decline"
-  | "video-end";
+  | "video-end"
+  | "typing";
 
 interface PeerCallbacks {
   onSignal: (type: DescType, payload: string) => void;
@@ -12,6 +13,7 @@ interface PeerCallbacks {
   onRemoteStream: (stream: MediaStream | null) => void;
   onConnectionState: (state: RTCPeerConnectionState) => void;
   onChannelOpen: () => void;
+  onTyping?: () => void;
 }
 
 const ICE_CONFIG: RTCConfiguration = {
@@ -79,7 +81,11 @@ export class PeerSession {
         if (msg.t === "chat" && typeof msg.text === "string") {
           this.cb.onChat(msg.text);
         } else if (msg.t === "ctrl" && typeof msg.ctrl === "string") {
-          this.cb.onControl(msg.ctrl as PeerControl);
+          if (msg.ctrl === "typing") {
+            this.cb.onTyping?.();
+          } else {
+            this.cb.onControl(msg.ctrl as PeerControl);
+          }
         }
       } catch {}
     };
