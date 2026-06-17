@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { STALE_MS, SIGNAL_TTL_MS } from "@/lib/presence";
 import type { PollResponse } from "@/lib/types";
 
+import { rateLimit } from "@/lib/rate-limit";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -10,6 +12,13 @@ export const dynamic = "force-dynamic";
 // It (1) heartbeats the caller, (2) reaps stale presence + orphan signals,
 // (3) returns the filtered online peers, and (4) drains this user's mailbox.
 export async function GET(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
+  // The client polls every 2 seconds (5 requests/10s), so 200 is very generous
+  // to avoid false positives.
+  if (!rateLimit(ip, 200, 10000)) {
+    return Response.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const params = request.nextUrl.searchParams;
   const id = params.get("id");
 

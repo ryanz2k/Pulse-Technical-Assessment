@@ -35,7 +35,13 @@ export default function Home() {
   const [isChatMinimized, setIsChatMinimized] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [remoteVideoEnabled, setRemoteVideoEnabled] = useState(true);
-  const [floatingReactions, setFloatingReactions] = useState<{id: number; emoji: string}[]>([]);
+  const [floatingReactions, setFloatingReactions] = useState<{
+    id: number;
+    emoji: string;
+    tx: number;
+    rightOffset: number;
+    scale: number;
+  }[]>([]);
   const reactionId = useRef(0);
 
   const [conn, _setConn] = useState<Conn>({ kind: "idle" });
@@ -130,7 +136,10 @@ export default function Home() {
             confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 10000 });
           } else {
             const id = reactionId.current++;
-            setFloatingReactions((prev) => [...prev, { id, emoji }]);
+            const tx = (Math.random() * 300) - 150; // -150 to +150px sway
+            const rightOffset = 20 + Math.random() * 180; // 20 to 200px from right
+            const scale = 1 + Math.random() * 0.5; // 1.0 to 1.5x scale
+            setFloatingReactions((prev) => [...prev, { id, emoji, tx, rightOffset, scale }]);
             setTimeout(() => setFloatingReactions((prev) => prev.filter((r) => r.id !== id)), 2600);
           }
         }
@@ -258,7 +267,10 @@ export default function Home() {
       confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 10000 });
     } else {
       const id = reactionId.current++;
-      setFloatingReactions((prev) => [...prev, { id, emoji }]);
+      const tx = (Math.random() * 300) - 150;
+      const rightOffset = 20 + Math.random() * 180;
+      const scale = 1 + Math.random() * 0.5;
+      setFloatingReactions((prev) => [...prev, { id, emoji, tx, rightOffset, scale }]);
       setTimeout(() => setFloatingReactions((prev) => prev.filter((r) => r.id !== id)), 2600);
     }
   }
@@ -450,6 +462,7 @@ export default function Home() {
           onReaction={handleSendReaction}
           floatingReactions={floatingReactions}
           peerId={conn.kind === "connecting" || conn.kind === "connected" ? conn.peerId : undefined}
+          onTyping={() => peerRef.current?.sendControl("typing")}
         />
       )}
 

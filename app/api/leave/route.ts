@@ -1,6 +1,8 @@
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+import { rateLimit } from "@/lib/rate-limit";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -8,6 +10,11 @@ export const dynamic = "force-dynamic";
 // signals to/from this user. Called via navigator.sendBeacon on tab close, so
 // the body may arrive as text — parse defensively.
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
+  if (!rateLimit(ip, 10, 10000)) {
+    return Response.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   let id: string | undefined;
   try {
     const text = await request.text();

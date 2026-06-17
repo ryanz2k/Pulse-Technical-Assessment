@@ -102,14 +102,15 @@ export default function WorldMap({
     const mapboxgl = (await import("mapbox-gl")).default;
     const next = !isGlobe;
     setIsGlobe(next);
-    // @ts-ignore — setProjection is available in mapbox-gl v3
+    // @ts-expect-error — setProjection is available in mapbox-gl v3
     map.setProjection(next ? "globe" : "mercator");
     if (next) {
       // Zoom out to see the globe nicely
       map.easeTo({ zoom: 1.5, duration: 600 });
-      // Re-apply fog for globe mode
+      // Configure dark space and fog for the globe view
+      // @ts-expect-error setFog is not fully typed in this version
       map.setFog({
-        color: "rgb(8, 8, 16)",
+        color: "rgb(5, 5, 10)",
         "high-color": "rgb(16, 24, 40)",
         "horizon-blend": 0.06,
         "space-color": "rgb(4, 4, 12)",

@@ -1,3 +1,5 @@
+import DOMPurify from "dompurify";
+
 export function strangerName(peerId: string): string {
   const adjectives = ["Silent", "Wandering", "Distant", "Unknown", "Fleeting", "Passing", "Drifting", "Hidden", "Quiet", "Brief"];
   const nouns = ["Wave", "Spark", "Echo", "Pulse", "Signal", "Shadow", "Flare", "Whisper", "Ripple", "Light"];
@@ -93,7 +95,10 @@ export class PeerSession {
       try {
         const msg = JSON.parse(e.data as string);
         if (msg.t === "chat" && typeof msg.text === "string") {
-          this.cb.onChat(msg.text);
+          const cleanText = DOMPurify.sanitize(msg.text, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+          if (cleanText.trim()) {
+            this.cb.onChat(cleanText);
+          }
         } else if (msg.t === "ctrl" && typeof msg.ctrl === "string") {
           if (msg.ctrl === "typing") {
             this.cb.onTyping?.();

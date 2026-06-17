@@ -21,7 +21,10 @@
 - **EntryGate redesign:** Premium animated hero with grid background, radial glow, floating decorative map dots, feature pills, shimmer-on-hover button.
 - **ConnectionPrompt redesign:** Pulsing ring animation for incoming requests, glassmorphism card.
 ## Phase 3: Security & Performance
-*(To be completed)*
+- **XSS Prevention:** Incoming WebRTC data channel chat messages are now sanitized using `DOMPurify` before being rendered by React, preventing any malicious HTML/Script injection if the rendering logic were ever to change.
+- **DDoS/Spam Protection:** Implemented an in-memory sliding window rate limiter (`lib/rate-limit.ts`). Applied rate limits to `/api/join`, `/api/leave`, `/api/signal` (50 reqs/10s), and `/api/poll` (200 reqs/10s).
+- **Debouncing:** Added debouncing to the chat input `onChange` handler to throttle the emission of the WebRTC `"typing"` control signal to a maximum of once per second, preventing data channel congestion.
+- **Resource Cleanup:** Verified the database actively sweeps stale presence records and orphaned signals every 2 seconds during polling. Verified that `lib/webrtc.ts` correctly stops all local `MediaStreamTracks` upon session close to immediately turn off the camera/mic hardware light.
 
 ## Phase 4: Polish & Features
 ### Interactive & Fun Features

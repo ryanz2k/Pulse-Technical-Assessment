@@ -18,6 +18,9 @@ interface ToastMsg {
 interface FloatingReaction {
   id: number;
   emoji: string;
+  tx: number;
+  rightOffset: number;
+  scale: number;
 }
 
 function formatTime(ms: number) {
@@ -57,6 +60,7 @@ export default function ChatPanel({
   onReaction,
   floatingReactions,
   peerId,
+  onTyping,
 }: {
   messages: ChatMessage[];
   connected: boolean;
@@ -70,11 +74,13 @@ export default function ChatPanel({
   onReaction: (emoji: string) => void;
   floatingReactions: FloatingReaction[];
   peerId?: string;
+  onTyping?: () => void;
 }) {
   const [draft, setDraft] = useState("");
   const [toasts, setToasts] = useState<ToastMsg[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(messages.length);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const name = peerId ? strangerName(peerId) : "Stranger";
 
@@ -92,6 +98,7 @@ export default function ChatPanel({
       const newMsg = messages[curr - 1];
       if (newMsg && !newMsg.mine) {
         const toast: ToastMsg = { id: newMsg.id, text: newMsg.text };
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setToasts((t) => [...t, toast]);
         setTimeout(() => setToasts((t) => t.filter((x) => x.id !== toast.id)), 4500);
       }
@@ -102,19 +109,28 @@ export default function ChatPanel({
   const submit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
-      const text = draft.trim();
-      if (!text || !connected) return;
-      onSend(text);
-      setDraft("");
+      if (draft.trim() && connected) {
+        onSend(draft.trim());
+        setDraft("");
+      }
     },
     [draft, connected, onSend],
   );
 
+  function handleType(e: React.ChangeEvent<HTMLInputElement>) {
+    setDraft(e.target.value);
+    if (!typingTimeoutRef.current && onTyping && connected) {
+      onTyping();
+      typingTimeoutRef.current = setTimeout(() => {
+        typingTimeoutRef.current = null;
+      }, 1000);
+    }
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      onSend(draft.trim());
-      setDraft("");
+      submit(e as unknown as React.FormEvent);
     }
   };
 
@@ -122,17 +138,23 @@ export default function ChatPanel({
     <>
       {/* Floating emoji reactions — shown on both sides */}
       <div className="pointer-events-none absolute inset-0 z-50 overflow-hidden">
-        {floatingReactions.map((r) => (
-          <div
-            key={r.id}
-            className="absolute bottom-32 right-6 text-4xl"
-            style={{
-              animation: "float-up 2.5s ease-out forwards",
-            }}
-          >
-            {r.emoji}
-          </div>
-        ))}
+        {floatingReactions.map((r) => {
+          return (
+            <div
+              key={r.id}
+              className="absolute bottom-24 text-4xl"
+              style={{
+                right: `${r.rightOffset}px`,
+                // @ts-expect-error dynamic CSS properties are fine
+                "--tx": `${r.tx}px`,
+                "--s": r.scale,
+                animation: "float-up 2.5s ease-out forwards",
+              }}
+            >
+              {r.emoji}
+            </div>
+          );
+        })}
       </div>
 
       {/* Toast notifications when minimized */}
@@ -289,7 +311,7 @@ export default function ChatPanel({
           >
             <input
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+              onChange={handleType}
               onKeyDown={handleKeyDown}
               placeholder={connected ? "Type a message…" : "Connecting…"}
               disabled={!connected}
@@ -308,8 +330,9 @@ export default function ChatPanel({
 
       <style>{`
         @keyframes float-up {
-          0% { opacity: 1; transform: translateY(0) scale(1); }
-          100% { opacity: 0; transform: translateY(-120px) scale(1.5); }
+          0% { opacity: 0; transform: translateY(0) scale(0.5); }
+          15% { opacity: 1; transform: translateY(-40px) translateX(calc(var(--tx) * 0.2)) scale(1.2); }
+          100% { opacity: 0; transform: translateY(-400px) translateX(var(--tx)) scale(var(--s)); }
         }
       `}</style>
     </>
