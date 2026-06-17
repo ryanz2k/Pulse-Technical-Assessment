@@ -34,6 +34,8 @@ export default function Home() {
   const [isChatMinimized, setIsChatMinimized] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [remoteVideoEnabled, setRemoteVideoEnabled] = useState(true);
+  const [floatingReactions, setFloatingReactions] = useState<{id: number; emoji: string}[]>([]);
+  const reactionId = useRef(0);
 
   const [conn, _setConn] = useState<Conn>({ kind: "idle" });
   const connRef = useRef<Conn>(conn);
@@ -83,6 +85,7 @@ export default function Home() {
     setIsTyping(false);
     setIsChatMinimized(false);
     setRemoteVideoEnabled(true);
+    setFloatingReactions([]);
     if (message) showNotice(message);
   }
 
@@ -118,6 +121,14 @@ export default function Home() {
         break;
       case "camera-on":
         setRemoteVideoEnabled(true);
+        break;
+      default:
+        if (ctrl.startsWith("reaction:")) {
+          const emoji = ctrl.slice(9);
+          const id = reactionId.current++;
+          setFloatingReactions((prev) => [...prev, { id, emoji }]);
+          setTimeout(() => setFloatingReactions((prev) => prev.filter((r) => r.id !== id)), 2600);
+        }
         break;
       case "video-request":
         if (videoRef.current === "none") setVideo("incoming");
@@ -233,6 +244,14 @@ export default function Home() {
 
   function handleCameraToggle(enabled: boolean) {
     peerRef.current?.sendControl(enabled ? "camera-on" : "camera-off");
+  }
+
+  function handleSendReaction(emoji: string) {
+    peerRef.current?.sendControl(`reaction:${emoji}` as Parameters<typeof peerRef.current.sendControl>[0]);
+    // Also show locally
+    const id = reactionId.current++;
+    setFloatingReactions((prev) => [...prev, { id, emoji }]);
+    setTimeout(() => setFloatingReactions((prev) => prev.filter((r) => r.id !== id)), 2600);
   }
 
   function processSignal(sig: SignalMsg) {
@@ -419,6 +438,8 @@ export default function Home() {
           isMinimized={isChatMinimized}
           onToggleMinimize={() => setIsChatMinimized((v) => !v)}
           isTyping={isTyping}
+          onReaction={handleSendReaction}
+          floatingReactions={floatingReactions}
         />
       )}
 
@@ -444,6 +465,7 @@ export default function Home() {
           localStream={localStream}
           remoteStream={remoteStream}
           remoteVideoEnabled={remoteVideoEnabled}
+          peerId={conn.kind === "connecting" || conn.kind === "connected" ? conn.peerId : undefined}
           onEnd={endVideo}
           onCameraToggle={handleCameraToggle}
           isChatMinimized={chatMinimized}

@@ -5,14 +5,16 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import type { Map as MapboxMap, Marker } from "mapbox-gl";
 import type { PeerDot } from "@/lib/types";
 
-const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "pk.eyJ1IjoicHVsc2UtbWFwIiwiYSI6ImNrMDBkZW1vMDAwMDAwMDAifQ.AAAAAAAAAAAAAAAAAAAAAA";
+const TOKEN =
+  process.env.NEXT_PUBLIC_MAPBOX_TOKEN ??
+  "pk.eyJ1IjoicHVsc2UtbWFwIiwiYSI6ImNrMDBkZW1vMDAwMDAwMDAifQ.AAAAAAAAAAAAAAAAAAAAAA";
 
 function dotColor(id: string): string {
   let hash = 0;
   for (let i = 0; i < id.length; i++) {
     hash = (hash * 31 + id.charCodeAt(i)) | 0;
   }
-  return `hsl(${Math.abs(hash) % 360}, 70%, 60%)`;
+  return `hsl(${Math.abs(hash) % 360}, 75%, 62%)`;
 }
 
 export default function WorldMap({
@@ -31,9 +33,8 @@ export default function WorldMap({
   const markersRef = useRef<Map<string, Marker>>(new Map());
   const meMarkerRef = useRef<Marker | null>(null);
   const [ready, setReady] = useState(false);
+  const [isGlobe, setIsGlobe] = useState(false);
 
-  // Marker click handlers are bound once, so read the live click handler +
-  // connectability through refs (synced in an effect, never during render).
   const onPeerClickRef = useRef(onPeerClick);
   const canConnectRef = useRef(canConnect);
   useEffect(() => {
@@ -54,15 +55,29 @@ export default function WorldMap({
       const map = new mapboxgl.Map({
         container: containerRef.current,
         style: "mapbox://styles/mapbox/dark-v11",
-        // Open centered on the user if we know where they are, else world view.
         center: me ? [me.lng, me.lat] : [0, 20],
-        zoom: me ? 4 : 1.4,
+        zoom: me ? 4 : 1.8,
         attributionControl: true,
+        antialias: true,
       });
+
       map.on("load", () => {
-        if (!cancelled) setReady(true);
+        if (cancelled) return;
+        // Atmospheric fog for depth
+        map.setFog({
+          color: "rgb(8, 8, 16)",
+          "high-color": "rgb(16, 24, 40)",
+          "horizon-blend": 0.06,
+          "space-color": "rgb(4, 4, 12)",
+          "star-intensity": 0.8,
+        });
+        setReady(true);
       });
-      map.addControl(new mapboxgl.NavigationControl({ showCompass: true, showZoom: true }), "top-right");
+
+      map.addControl(
+        new mapboxgl.NavigationControl({ showCompass: true, showZoom: true }),
+        "top-right",
+      );
       mapRef.current = map;
     })();
 
@@ -76,11 +91,36 @@ export default function WorldMap({
       mapRef.current = null;
       setReady(false);
     };
-    // `me` is only read for the initial center; we don't want to re-init on change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Show / move the user's own "you are here" pin.
+  // Toggle globe / flat projection
+  const toggleProjection = async () => {
+    const map = mapRef.current;
+    if (!map) return;
+    const mapboxgl = (await import("mapbox-gl")).default;
+    const next = !isGlobe;
+    setIsGlobe(next);
+    // @ts-ignore — setProjection is available in mapbox-gl v3
+    map.setProjection(next ? "globe" : "mercator");
+    if (next) {
+      // Zoom out to see the globe nicely
+      map.easeTo({ zoom: 1.5, duration: 600 });
+      // Re-apply fog for globe mode
+      map.setFog({
+        color: "rgb(8, 8, 16)",
+        "high-color": "rgb(16, 24, 40)",
+        "horizon-blend": 0.06,
+        "space-color": "rgb(4, 4, 12)",
+        "star-intensity": 0.9,
+      });
+    } else {
+      map.easeTo({ zoom: me ? 3 : 1.8, duration: 600 });
+    }
+    void mapboxgl; // satisfy import
+  };
+
+  // Show / move the user's own pin.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready || !me) return;
@@ -94,7 +134,6 @@ export default function WorldMap({
         el.className = "pulse-me";
         el.title = "You are here";
         el.innerHTML = `<span class="pulse-me-label">Me</span>📍`;
-        // anchor "bottom" → the pin's tip sits on the exact coordinate.
         meMarkerRef.current = new mapboxgl.Marker({ element: el, anchor: "bottom" })
           .setLngLat([me.lng, me.lat])
           .addTo(map);
@@ -103,12 +142,10 @@ export default function WorldMap({
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [me, ready]);
 
-  // Reconcile markers whenever the peer list changes (or the map becomes ready).
+  // Reconcile peer markers.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
@@ -137,10 +174,11 @@ export default function WorldMap({
             .addTo(map);
           markers.set(peer.id, marker);
         }
-        marker.getElement().style.opacity = peer.busy ? "0.35" : "1";
+        const elem = marker.getElement();
+        elem.style.opacity = peer.busy ? "0.3" : "1";
+        elem.style.pointerEvents = peer.busy || !canConnect ? "none" : "auto";
       }
 
-      // Drop markers for peers that went offline / got filtered out.
       for (const [id, marker] of markers) {
         if (!seen.has(id)) {
           marker.remove();
@@ -149,14 +187,12 @@ export default function WorldMap({
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [peers, ready]);
+    return () => { cancelled = true; };
+  }, [peers, ready, canConnect]);
 
   return (
     <div className="absolute inset-0">
-      <div ref={containerRef} className="h-full w-full bg-zinc-900" />
+      <div ref={containerRef} className="h-full w-full bg-zinc-950" />
 
       {!TOKEN && (
         <div className="absolute inset-0 flex items-center justify-center p-6 text-center">
@@ -168,21 +204,38 @@ export default function WorldMap({
         </div>
       )}
 
-      {/* Online count and Center button */}
-      <div className="absolute bottom-6 left-6 flex items-center gap-3">
-        <div className="rounded-full bg-zinc-900/80 px-4 py-2 text-sm font-medium text-zinc-300 shadow-lg backdrop-blur">
-          <span className="mr-2 inline-block h-2 w-2 rounded-full bg-emerald-400"></span>
-          {peers.length} online
+      {/* Top-left: App name overlay */}
+      <div className="absolute left-4 top-4 z-10 flex items-center gap-2">
+        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-zinc-950/80 px-4 py-2 shadow-lg backdrop-blur-md">
+          <span className="text-base font-bold tracking-wide text-white">Pulse</span>
+          <span className="h-3.5 w-px bg-zinc-700" />
+          <span className="flex items-center gap-1.5 text-xs text-zinc-400">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+            {peers.length} live
+          </span>
         </div>
-        
+      </div>
+
+      {/* Bottom-left: controls */}
+      <div className="absolute bottom-6 left-6 z-10 flex items-center gap-2">
         {me && (
           <button
-            onClick={() => mapRef.current?.flyTo({ center: [me.lng, me.lat], zoom: 4, pitch: 0, bearing: 0 })}
-            className="rounded-full bg-zinc-800/90 hover:bg-zinc-700 px-4 py-2 text-sm font-medium text-zinc-200 shadow-lg backdrop-blur transition-colors"
+            onClick={() =>
+              mapRef.current?.flyTo({ center: [me.lng, me.lat], zoom: 4, pitch: 0, bearing: 0 })
+            }
+            className="flex items-center gap-2 rounded-full border border-white/10 bg-zinc-900/80 px-4 py-2 text-xs font-medium text-zinc-300 shadow-lg backdrop-blur-md transition-colors hover:bg-zinc-800/90 hover:text-white"
           >
-            📍 Center on Me
+            📍 Center on me
           </button>
         )}
+
+        <button
+          onClick={toggleProjection}
+          className="flex items-center gap-2 rounded-full border border-white/10 bg-zinc-900/80 px-4 py-2 text-xs font-medium text-zinc-300 shadow-lg backdrop-blur-md transition-colors hover:bg-zinc-800/90 hover:text-white"
+          title={isGlobe ? "Switch to flat map" : "Switch to globe view"}
+        >
+          {isGlobe ? "🗺️ Flat map" : "🌍 Globe view"}
+        </button>
       </div>
     </div>
   );

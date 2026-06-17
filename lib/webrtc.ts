@@ -6,7 +6,8 @@ export type PeerControl =
   | "video-end"
   | "typing"
   | "camera-off"
-  | "camera-on";
+  | "camera-on"
+  | `reaction:${string}`;
 
 interface PeerCallbacks {
   onSignal: (type: DescType, payload: string) => void;

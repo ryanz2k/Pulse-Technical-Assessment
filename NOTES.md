@@ -14,7 +14,7 @@
 - **Broken SVG icons when muted/stopped:** The complex heroicons 20×20 paths rendered incorrectly in the browser. Replaced all inline SVG icons with `lucide-react` (`Mic`, `MicOff`, `Video`, `VideoOff`, `PhoneOff`) which are reliable and well-tested.
 
 ### UI/UX Improvements
-- **Call duration timer:** Live `🔴 0:42` timer displayed in the video overlay.
+- **Call duration timer:** Live timer displayed in the video overlay.
 - **Minimizable Chat:** Chat collapses to a floating pill with Google Meet-style message toast notifications when minimized and a message arrives.
 - **Typing indicator:** Lightweight `typing` signal sent over the WebRTC data channel triggers a bouncing-dot animation in the chat panel.
 - **Message timestamps:** Each bubble shows the time it was sent.
@@ -22,6 +22,17 @@
 - **ConnectionPrompt redesign:** Pulsing ring animation for incoming requests, glassmorphism card.
 - **Map dot polish:** Larger dots (16px), hover `"Connect"` tooltip via CSS `::after`, emerald green label pill for own location, larger ring animation.
 - **Remote camera-off placeholder:** When the remote peer disables their camera, shows a pulsing avatar + message instead of black screen.
+
+### Round 3 Fixes & Additions
+- **PIP camera aspect ratio:** Fixed local "You" camera from portrait (96×144) to landscape 16:9 (160×90) — the full camera width is now visible.
+- **End Call icon:** Changed from `PhoneOff` (crossed out) to plain `Phone` icon on the red end call button.
+- **Stranger name:** Each peer gets a consistent anonymous name (e.g. "Silent Wave") derived from a deterministic hash of their peer ID — shown in the video call header and placeholder screens.
+- **Video call header bar:** Top overlay in the video call now shows the stranger's anonymous name and a live call timer side by side.
+- **Emoji reactions:** A quick-reaction bar in the chat (👋😂❤️🔥😮👍) sends a `reaction:emoji` control signal over the WebRTC data channel. Both sides see a floating emoji animation.
+- **Globe projection toggle:** A "🌍 Globe view" button on the map switches Mapbox to globe projection with atmospheric fog and stars. Toggling back returns to the flat map.
+- **Mapbox atmosphere:** Added `map.setFog()` with dark space color and star intensity for a dramatic space look.
+- **App name overlay:** A "Pulse · N live" pill badge now appears in the map's top-left corner.
+- **Disabled peer dots during call:** While in a call, other peer dots become non-interactive (`pointer-events: none`) to prevent accidental connection attempts.
 
 ## Phase 3
 *(To be completed)*
