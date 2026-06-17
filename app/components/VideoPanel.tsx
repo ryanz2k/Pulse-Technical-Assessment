@@ -2,18 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Mic, MicOff, Video, VideoOff, Phone, Signal } from "lucide-react";
-
-// Derive a consistent anonymous name from peer ID
-function strangerName(peerId: string): string {
-  const adjectives = ["Silent", "Wandering", "Distant", "Unknown", "Fleeting", "Passing", "Drifting", "Hidden", "Quiet", "Brief"];
-  const nouns = ["Wave", "Spark", "Echo", "Pulse", "Signal", "Shadow", "Flare", "Whisper", "Ripple", "Light"];
-  let hash = 0;
-  for (let i = 0; i < peerId.length; i++) {
-    hash = (hash * 31 + peerId.charCodeAt(i)) | 0;
-  }
-  const h = Math.abs(hash);
-  return `${adjectives[h % adjectives.length]} ${nouns[(h >> 4) % nouns.length]}`;
-}
+import { strangerName } from "@/lib/webrtc";
 
 function ControlButton({
   onClick,

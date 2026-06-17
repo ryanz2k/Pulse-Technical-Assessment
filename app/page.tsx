@@ -10,6 +10,7 @@ import { join, leave, poll, sendSignal } from "@/lib/api";
 import { PeerSession, type DescType, type PeerControl } from "@/lib/webrtc";
 import { POLL_INTERVAL_MS } from "@/lib/presence";
 import { type PeerDot, type SignalMsg } from "@/lib/types";
+import confetti from "canvas-confetti";
 
 type Conn =
   | { kind: "idle" }
@@ -125,9 +126,13 @@ export default function Home() {
       default:
         if (ctrl.startsWith("reaction:")) {
           const emoji = ctrl.slice(9);
-          const id = reactionId.current++;
-          setFloatingReactions((prev) => [...prev, { id, emoji }]);
-          setTimeout(() => setFloatingReactions((prev) => prev.filter((r) => r.id !== id)), 2600);
+          if (emoji === "🎉") {
+            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 10000 });
+          } else {
+            const id = reactionId.current++;
+            setFloatingReactions((prev) => [...prev, { id, emoji }]);
+            setTimeout(() => setFloatingReactions((prev) => prev.filter((r) => r.id !== id)), 2600);
+          }
         }
         break;
       case "video-request":
@@ -249,9 +254,13 @@ export default function Home() {
   function handleSendReaction(emoji: string) {
     peerRef.current?.sendControl(`reaction:${emoji}` as Parameters<typeof peerRef.current.sendControl>[0]);
     // Also show locally
-    const id = reactionId.current++;
-    setFloatingReactions((prev) => [...prev, { id, emoji }]);
-    setTimeout(() => setFloatingReactions((prev) => prev.filter((r) => r.id !== id)), 2600);
+    if (emoji === "🎉") {
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 10000 });
+    } else {
+      const id = reactionId.current++;
+      setFloatingReactions((prev) => [...prev, { id, emoji }]);
+      setTimeout(() => setFloatingReactions((prev) => prev.filter((r) => r.id !== id)), 2600);
+    }
   }
 
   function processSignal(sig: SignalMsg) {
@@ -440,6 +449,7 @@ export default function Home() {
           isTyping={isTyping}
           onReaction={handleSendReaction}
           floatingReactions={floatingReactions}
+          peerId={conn.kind === "connecting" || conn.kind === "connected" ? conn.peerId : undefined}
         />
       )}
 

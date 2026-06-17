@@ -20,22 +20,19 @@
 - **Message timestamps:** Each bubble shows the time it was sent.
 - **EntryGate redesign:** Premium animated hero with grid background, radial glow, floating decorative map dots, feature pills, shimmer-on-hover button.
 - **ConnectionPrompt redesign:** Pulsing ring animation for incoming requests, glassmorphism card.
-- **Map dot polish:** Larger dots (16px), hover `"Connect"` tooltip via CSS `::after`, emerald green label pill for own location, larger ring animation.
-- **Remote camera-off placeholder:** When the remote peer disables their camera, shows a pulsing avatar + message instead of black screen.
-
-### Round 3 Fixes & Additions
-- **PIP camera aspect ratio:** Fixed local "You" camera from portrait (96×144) to landscape 16:9 (160×90) — the full camera width is now visible.
-- **End Call icon:** Changed from `PhoneOff` (crossed out) to plain `Phone` icon on the red end call button.
-- **Stranger name:** Each peer gets a consistent anonymous name (e.g. "Silent Wave") derived from a deterministic hash of their peer ID — shown in the video call header and placeholder screens.
-- **Video call header bar:** Top overlay in the video call now shows the stranger's anonymous name and a live call timer side by side.
-- **Emoji reactions:** A quick-reaction bar in the chat (👋😂❤️🔥😮👍) sends a `reaction:emoji` control signal over the WebRTC data channel. Both sides see a floating emoji animation.
-- **Globe projection toggle:** A "🌍 Globe view" button on the map switches Mapbox to globe projection with atmospheric fog and stars. Toggling back returns to the flat map.
-- **Mapbox atmosphere:** Added `map.setFog()` with dark space color and star intensity for a dramatic space look.
-- **App name overlay:** A "Pulse · N live" pill badge now appears in the map's top-left corner.
-- **Disabled peer dots during call:** While in a call, other peer dots become non-interactive (`pointer-events: none`) to prevent accidental connection attempts.
-
-## Phase 3
+## Phase 3: Security & Performance
 *(To be completed)*
 
-## Phase 4
-*(To be completed)*
+## Phase 4: Polish & Features
+### Interactive & Fun Features
+- **🌍 Globe view toggle:** A "Globe view" button on the map switches Mapbox to a globe projection with atmospheric fog, dark space colors, and stars. Toggling back returns to the flat map. The map now starts in Globe view by default.
+- **🎉 Confetti blast:** Clicking the 🎉 emoji in the chat triggers a full-screen confetti explosion for both users (using `canvas-confetti` and a WebRTC control signal).
+- **😂 Spam-able Emoji Reactions:** The chat's reaction bar is now permanently expanded. Users can spam reactions (👋, 😂, ❤️, 🔥, etc.), which float up like Facebook/Instagram Live reactions.
+- **🕵️ Anonymous Stranger Names:** Each peer is assigned a consistent, deterministic name (e.g. "Silent Wave") derived from their ID hash. This name appears in the video header, chat header, and toast notifications.
+
+### UI & Layout Adjustments
+- **PIP aspect ratio:** Fixed local "You" camera from portrait to landscape 16:9 (`160×90`), showing the full camera width.
+- **Video Call Header:** Added a top overlay inside the video stream showing the stranger's name and a live call timer side by side.
+- **End Call icon:** Simplified the icon from a crossed-out phone to a plain red handset.
+- **App Name & Live Count:** Added a glassmorphism "Pulse · N live" pill overlay to the top-left of the World Map.
+- **Disabled background dots:** While in a call, other peer dots become non-interactive (`pointer-events: none`) to prevent accidental connection attempts.

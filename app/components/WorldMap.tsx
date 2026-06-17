@@ -33,7 +33,7 @@ export default function WorldMap({
   const markersRef = useRef<Map<string, Marker>>(new Map());
   const meMarkerRef = useRef<Marker | null>(null);
   const [ready, setReady] = useState(false);
-  const [isGlobe, setIsGlobe] = useState(false);
+  const [isGlobe, setIsGlobe] = useState(true);
 
   const onPeerClickRef = useRef(onPeerClick);
   const canConnectRef = useRef(canConnect);
@@ -59,6 +59,7 @@ export default function WorldMap({
         zoom: me ? 4 : 1.8,
         attributionControl: true,
         antialias: true,
+        projection: "globe",
       });
 
       map.on("load", () => {
@@ -232,9 +233,9 @@ export default function WorldMap({
         <button
           onClick={toggleProjection}
           className="flex items-center gap-2 rounded-full border border-white/10 bg-zinc-900/80 px-4 py-2 text-xs font-medium text-zinc-300 shadow-lg backdrop-blur-md transition-colors hover:bg-zinc-800/90 hover:text-white"
-          title={isGlobe ? "Switch to flat map" : "Switch to globe view"}
+          title={isGlobe ? "Switch to flat view" : "Switch to globe view"}
         >
-          {isGlobe ? "🗺️ Flat map" : "🌍 Globe view"}
+          {isGlobe ? "🗺️ Flat view" : "🌍 Globe view"}
         </button>
       </div>
     </div>

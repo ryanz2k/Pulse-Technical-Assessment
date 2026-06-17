@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { strangerName } from "@/lib/webrtc";
 
 export interface ChatMessage {
   id: number;
@@ -41,7 +42,7 @@ function TypingIndicator() {
   );
 }
 
-const REACTIONS = ["👋", "😂", "❤️", "🔥", "😮", "👍"];
+const REACTIONS = ["🎉", "👋", "😂", "❤️", "🔥", "😮", "👍"];
 
 export default function ChatPanel({
   messages,
@@ -55,6 +56,7 @@ export default function ChatPanel({
   isTyping,
   onReaction,
   floatingReactions,
+  peerId,
 }: {
   messages: ChatMessage[];
   connected: boolean;
@@ -67,12 +69,14 @@ export default function ChatPanel({
   isTyping: boolean;
   onReaction: (emoji: string) => void;
   floatingReactions: FloatingReaction[];
+  peerId?: string;
 }) {
   const [draft, setDraft] = useState("");
   const [toasts, setToasts] = useState<ToastMsg[]>([]);
-  const [showReactions, setShowReactions] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(messages.length);
+
+  const name = peerId ? strangerName(peerId) : "Stranger";
 
   useEffect(() => {
     if (!isMinimized) {
@@ -171,7 +175,7 @@ export default function ChatPanel({
           {/* Header */}
           <header className="flex items-center justify-between border-b border-white/10 px-4 py-3">
             <div>
-              <p className="font-semibold tracking-wide">Stranger</p>
+              <p className="font-semibold tracking-wide">{name}</p>
               <p className="text-xs text-zinc-500">
                 {connected ? "Connected — peer-to-peer" : "Connecting…"}
               </p>
@@ -264,33 +268,16 @@ export default function ChatPanel({
           {/* Emoji reactions bar */}
           {connected && (
             <div className="border-t border-white/5 px-3 py-2">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowReactions((v) => !v)}
-                  className="text-lg transition-transform hover:scale-125"
-                  title="Send reaction"
-                >
-                  😊
-                </button>
-                {showReactions && (
-                  <div className="flex gap-1">
-                    {REACTIONS.map((emoji) => (
-                      <button
-                        key={emoji}
-                        onClick={() => {
-                          onReaction(emoji);
-                          setShowReactions(false);
-                        }}
-                        className="rounded-lg px-1.5 py-0.5 text-lg transition-all hover:scale-125 hover:bg-zinc-800"
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {!showReactions && (
-                  <p className="text-[10px] text-zinc-600">Quick reactions</p>
-                )}
+              <div className="flex gap-1 justify-between">
+                {REACTIONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => onReaction(emoji)}
+                    className="rounded-lg px-2 py-1 text-xl transition-all hover:scale-125 hover:bg-zinc-800 active:scale-95"
+                  >
+                    {emoji}
+                  </button>
+                ))}
               </div>
             </div>
           )}
