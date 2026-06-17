@@ -7,14 +7,21 @@
 - **Bug 4:** Users remained stuck in "busy" state after a connection ended. In `app/api/signal/route.ts`, the `busy` flag was not reset to `false` when the signal type was `"end"`. **Fix:** Updated the logic to set `busy: false` for both `"decline"` and `"end"` signals.
 
 ## Phase 2
-- **Video Layout & Options:** Completely reworked `VideoPanel`. Fixed PIP overlap by moving it above the control bar. Added a live call duration timer. Added SVG icon-based Mute/Stop Video/End Call controls with labeled buttons.
-- **Remote Video-Off Indicator:** When the remote peer disables their camera (or has no stream yet), a pulsing avatar placeholder is shown instead of a black screen. Tracks `MediaStreamTrack.mute` events to react in real-time.
-- **Minimizable Chat:** `ChatPanel` now has a minimize button (–) that collapses it to a floating pill in the bottom-right corner. When minimized and the stranger sends a message, a Google Meet-style toast slides in from the right. Chat restores on click.
-- **Chat While on Video:** `VideoPanel` is layout-aware — when the chat is open, the video shrinks to avoid overlap. When minimized, it fills the full screen.
-- **Typing Indicator:** Sending a message emits a lightweight `"typing"` control signal over the WebRTC data channel. When received, a bouncing dot animation ("Stranger is typing…") appears in the chat panel.
-- **Message Timestamps:** Every message bubble now shows the time it was sent.
-- **EntryGate Redesign:** Premium animated hero screen with a grid background, radial glow, floating decorative map dots, feature pills, and a shimmer-on-hover button.
-- **ConnectionPrompt Redesign:** Replaced the plain dialog with a pulsing ring animation (like an incoming phone call) and glassmorphism styling.
+### Bug Fixes
+- **Refresh disconnect:** On `pagehide`/`beforeunload`, the app now sends an `"end"` signal to the connected peer via `navigator.sendBeacon` before tearing down. This ensures the peer's session closes immediately on refresh instead of waiting for the stale-presence timeout.
+- **"Stranger turned off camera" showing incorrectly:** The original approach used `MediaStreamTrack.mute` events, which only fire when RTP packets stop entirely—not when `track.enabled = false`. Fixed by adding `camera-off` / `camera-on` WebRTC data channel control signals. When a user toggles their camera, the correct signal is sent and the remote side updates a `remoteVideoEnabled` prop instead of guessing from track state.
+- **Video layout not pushing chat aside:** The `VideoPanel` previously used `padding-right` on an `absolute inset-0` div, which has no effect on child positioning. Fixed by using `right-96` / `right-0` on the panel itself, matching the `w-96` chat panel width.
+- **Broken SVG icons when muted/stopped:** The complex heroicons 20×20 paths rendered incorrectly in the browser. Replaced all inline SVG icons with `lucide-react` (`Mic`, `MicOff`, `Video`, `VideoOff`, `PhoneOff`) which are reliable and well-tested.
+
+### UI/UX Improvements
+- **Call duration timer:** Live `🔴 0:42` timer displayed in the video overlay.
+- **Minimizable Chat:** Chat collapses to a floating pill with Google Meet-style message toast notifications when minimized and a message arrives.
+- **Typing indicator:** Lightweight `typing` signal sent over the WebRTC data channel triggers a bouncing-dot animation in the chat panel.
+- **Message timestamps:** Each bubble shows the time it was sent.
+- **EntryGate redesign:** Premium animated hero with grid background, radial glow, floating decorative map dots, feature pills, shimmer-on-hover button.
+- **ConnectionPrompt redesign:** Pulsing ring animation for incoming requests, glassmorphism card.
+- **Map dot polish:** Larger dots (16px), hover `"Connect"` tooltip via CSS `::after`, emerald green label pill for own location, larger ring animation.
+- **Remote camera-off placeholder:** When the remote peer disables their camera, shows a pulsing avatar + message instead of black screen.
 
 ## Phase 3
 *(To be completed)*

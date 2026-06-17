@@ -138,7 +138,7 @@ export default function ChatPanel({
         </button>
       ) : (
         /* Full chat panel */
-        <div className="absolute inset-y-0 right-0 z-40 flex w-full max-w-sm flex-col border-l border-white/10 bg-zinc-950/80 backdrop-blur-xl text-zinc-100 shadow-2xl">
+        <div className="absolute inset-y-0 right-0 z-40 flex w-96 flex-col border-l border-white/10 bg-zinc-950/80 backdrop-blur-xl text-zinc-100 shadow-2xl">
           <header className="flex items-center justify-between border-b border-white/10 px-4 py-3">
             <div>
               <p className="font-semibold tracking-wide">Stranger</p>

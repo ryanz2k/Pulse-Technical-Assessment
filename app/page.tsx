@@ -33,6 +33,7 @@ export default function Home() {
   const [myLocation, setMyLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isChatMinimized, setIsChatMinimized] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [remoteVideoEnabled, setRemoteVideoEnabled] = useState(true);
 
   const [conn, _setConn] = useState<Conn>({ kind: "idle" });
   const connRef = useRef<Conn>(conn);
@@ -52,6 +53,7 @@ export default function Home() {
   const msgId = useRef(0);
   const requestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionIdRef = useRef(sessionId);
 
   function showNotice(text: string) {
     setNotice(text);
@@ -80,6 +82,7 @@ export default function Home() {
     setConn({ kind: "idle" });
     setIsTyping(false);
     setIsChatMinimized(false);
+    setRemoteVideoEnabled(true);
     if (message) showNotice(message);
   }
 
@@ -110,6 +113,12 @@ export default function Home() {
   function handleControl(ctrl: PeerControl) {
     const ps = peerRef.current;
     switch (ctrl) {
+      case "camera-off":
+        setRemoteVideoEnabled(false);
+        break;
+      case "camera-on":
+        setRemoteVideoEnabled(true);
+        break;
       case "video-request":
         if (videoRef.current === "none") setVideo("incoming");
         break;
@@ -222,6 +231,10 @@ export default function Home() {
     setVideo("none");
   }
 
+  function handleCameraToggle(enabled: boolean) {
+    peerRef.current?.sendControl(enabled ? "camera-on" : "camera-off");
+  }
+
   function processSignal(sig: SignalMsg) {
     switch (sig.type) {
       case "request": {
@@ -306,9 +319,33 @@ export default function Home() {
     };
   }, [phase, sessionId]);
 
+  // Bug fix: on pagehide/beforeunload, send "end" signal to peer so they
+  // get notified immediately instead of waiting for stale timeout.
   useEffect(() => {
     if (!sessionId || phase !== "live") return;
-    const onLeave = () => leave(sessionId);
+    sessionIdRef.current = sessionId;
+
+    const onLeave = () => {
+      leave(sessionId);
+      const c = connRef.current;
+      if (
+        (c.kind === "connecting" ||
+          c.kind === "connected" ||
+          c.kind === "requesting") &&
+        "peerId" in c
+      ) {
+        const body = JSON.stringify({
+          fromId: sessionId,
+          toId: c.peerId,
+          type: "end",
+        });
+        navigator.sendBeacon?.(
+          "/api/signal",
+          new Blob([body], { type: "application/json" }),
+        );
+      }
+    };
+
     window.addEventListener("pagehide", onLeave);
     window.addEventListener("beforeunload", onLeave);
     return () => {
@@ -339,7 +376,6 @@ export default function Home() {
         canConnect={conn.kind === "idle"}
       />
 
-      {/* Toast notice */}
       {notice && (
         <div className="absolute left-1/2 top-20 z-50 -translate-x-1/2 rounded-full bg-zinc-800/90 px-5 py-2 text-sm text-zinc-100 shadow-xl backdrop-blur-md">
           {notice}
@@ -376,7 +412,6 @@ export default function Home() {
           videoBusy={video !== "none"}
           onSend={(text) => {
             peerRef.current?.sendChat(text);
-            peerRef.current?.sendControl("typing" as PeerControl);
             addMessage(true, text);
           }}
           onStartVideo={startVideoRequest}
@@ -408,7 +443,9 @@ export default function Home() {
         <VideoPanel
           localStream={localStream}
           remoteStream={remoteStream}
+          remoteVideoEnabled={remoteVideoEnabled}
           onEnd={endVideo}
+          onCameraToggle={handleCameraToggle}
           isChatMinimized={chatMinimized}
         />
       )}
